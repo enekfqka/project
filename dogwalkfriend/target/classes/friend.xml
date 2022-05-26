@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="friendns">  
+	<!-- 친구 내역에서 후기 작성을 위해 본인의 글을 이용한 사람을 찾아내기 위함 -->
+	<select id="selectList" parameterType="friend" resultType="friend">
+		select f.*, m.* from friend f, member m where f.MB_no=m.MB_no and f.FD_confirm='Y' and f.FD_mConfirm='Y' and f.WK_no=#{WK_no}
+	</select>
+
+	<!-- 후기 작성 이후 다시 친구 내역 목록을 불러오기 위해 -->
+	<select id="selectWk" parameterType="integer" resultType="friend">
+		select * from friend where FD_no=#{FD_no}
+	</select>
+	
+	<!-- 친구 내역에서 내가 친구 신청한 글의 개수를 가져오는 로직 -->
+	<select id="getTotalMyFd" parameterType="friend" resultType="integer">
+		select count(*) from (select a.*, rowNum rn from (select f.*, w.WK_startDate, w.WK_time, w.WK_loc from friend f, walk w where f.WK_no=w.WK_no and f.MB_no=#{MB_no}
+		<!-- 검색어가 있을 때 -->
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+		order by f.FD_no desc) a)
+	</select>  
+	
+	<!-- 친구 목록 불러오기 -->
+	<select id="myFdList" parameterType="friend" resultType="friend">
+		select * from (select a.*, rowNum rn from (select f.*, w.WK_startDate, w.WK_time, w.WK_loc from friend f, walk w where f.WK_no=w.WK_no and f.MB_no=#{MB_no}
+			<!-- 검색어가 있을때 -->
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+		order by f.FD_no desc) a) where rn between #{startRow} and #{endRow}
+	</select>
+	
+	<!-- 친구 구함에서 신청 버튼 클릭 시  -->
+	<insert id="insert" parameterType="friend">
+		insert into reservation values
+		((SELECT NVL(MAX(RSV_num), 0) + 1 as RSV_num FROM reservation), 'Y', 'N', #{MB_num}, #{CP_num})
+	</insert>
+	
+	<!-- 친구 구함 하단 신청 현황  -->
+	<select id="friendList" parameterType="friend" resultType="friend">
+		select * from (select f.*, m.MB_nick, m.MB_gender from friend f, member m where f.MB_no=m.MB_no) where WK_no=#{WK_no} order by FD_no
+	</select>
+	
+	<!-- 1. 신청 중복 등록 방지, 2. 지원자 신청 취소 버튼(매칭 대기 상태일 때만 취소 가능) -->
+	<select id="selectFd" parameterType="friend" resultType="friend">
+		select * from friend where WK_no=#{WK_no} and MB_no=#{MB_no}
+	</select>
+	
+	<!-- WK_no에 해당하는 친구 신청 내역 행 개수 -->
+	<select id="getTotal" parameterType="integer" resultType="integer">
+		select count(*) from friend where WK_no=#{WK_no}
+	</select>
+	
+	<!-- 작성자 친구 구함 신청 현황 매칭 여부 "수락" 버튼 -->
+	<update id="updateAccept" parameterType="friend">
+		update friend set FD_mConfirm='Y' where WK_no=#{WK_no} and MB_no=#{MB_no}
+	</update>
+	
+	<!-- 작성자 친구 구함 신청 현황 매칭 여부 "거절" 버튼 -->
+	<update id="updateRefuse" parameterType="friend">
+		update friend set FD_confirm='N' where WK_no=#{WK_no} and MB_no=#{MB_no}
+	</update>
+	
+	<!-- 관리자가 CP_num에 해당하는 카풀글 내 예약내역
+	<select id="adminRvList" parameterType="friend" resultType="friend">
+		select f.*, m.MB_nick, m.MB_gender from friend f, member m
+		where f.MB_num=m.MB_num and f.CP_num=#{CP_num}
+	</select> -->
+	
+	<!-- <select id="getTotalRv" parameterType="friend" resultType="integer">
+		select count(*) from (select a.*, rowNum rn from (select rv.*, c.CP_startPoint, c.CP_endPoint from reservation rv, carpool c
+		where rv.CP_num=c.CP_num
+		검색어가 있을때
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+		order by c.CP_num desc) a)
+	</select>
+	
+	<select id="adminRvAllList" parameterType="friend" resultType="friend">
+		select * from (select a.*, rowNum rn from (select rv.*, c.CP_startPoint, c.CP_endPoint from reservation rv, carpool c
+			where rv.CP_num=c.CP_num
+			검색어가 있을때
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+		order by c.CP_num desc) a) where rn between #{startRow} and #{endRow}
+	</select> -->
+	
+	<!-- 게시글 매칭 완료 시 기존에 신청된 수락 버튼 거절로 변환 -->
+	<update id="updateAllRefuse" parameterType="integer">
+		update friend set FD_confirm='N' where WK_no=#{WK_no} and FD_confirm='Y' and FD_mConfirm='N'
+	</update>
+	
+	<!-- 매칭 대기 상태인 지원자가 신청 취소 버튼 클릭 시 -->
+	<delete id="delete" parameterType="friend">
+		delete from friend where WK_no=#{WK_no} and MB_no=#{MB_no} and FD_confirm='Y' and FD_mConfirm='N'
+	</delete>
+	
+	<!-- 전체 예약 내역 리스트 - 관리자 메인 -->
+	<select id="fdAllList" parameterType="friend" resultType="friend">
+		select * from (select a.*, rowNum rn from (select f.*, w.WK_startDate, w.WK_loc from friend f, walk w
+			where f.WK_no=w.WK_no order by w.WK_no desc) a) where rn between 1 and 6
+	</select>
+	
+</mapper>

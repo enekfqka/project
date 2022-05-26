@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+ PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<typeAliases>
+		<!-- 			별명                                         실제 객체 -->
+		<typeAlias alias="dog" type="com.project.dogwalkfriend.model.Dog"/>
+		<typeAlias alias="friend" type="com.project.dogwalkfriend.model.Friend"/>
+		<typeAlias alias="member" type="com.project.dogwalkfriend.model.Member"/>
+		<typeAlias alias="notice" type="com.project.dogwalkfriend.model.Notice"/>
+		<typeAlias alias="walk" type="com.project.dogwalkfriend.model.Walk"/>
+	</typeAliases>
+	
+	<mappers>
+		<mapper resource="dog.xml" />
+		<mapper resource="friend.xml" />
+		<mapper resource="member.xml" />
+		<mapper resource="notice.xml" />
+		<mapper resource="walk.xml" />
+	</mappers>
+</configuration>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="walkns">
+	
+	<insert id="insert" parameterType="walk">
+		insert into walk
+		(WK_no, WK_title, WK_regDate, WK_startDate, WK_time, WK_loc,
+		WK_personNum, WK_personNow, WK_content, WK_readCnt, WK_del, MB_no)
+		values(#{WK_no}, #{WK_title}, sysdate, #{WK_startDate}, #{WK_time}, #{WK_loc}, 
+		#{WK_personNum}, #{WK_personNow}, #{WK_content}, 0, 'N', #{MB_no})
+	</insert>
+	
+	<select id="walkList" parameterType="walk" resultType="walk">
+		select * from (select a.*, rowNum rn from (select * from walk
+		<!-- 검색 기능 사용 시 -->
+		<!-- keyword에 값이 있으면 where 속에 like 옵션 사용, 없으면 사용 X -->
+		<!-- ${}는 변수, #{}는 값 -->
+		<where>
+			<!-- 검색어가 있을 때 -->
+			<if test="keyword!=null and keyword!=''">
+				${search} like '%'||#{keyword}||'%'
+			</if>
+		</where>
+		order by WK_no desc) a) where rn between #{startRow} and #{endRow}
+	</select>
+	
+	<select id="getTotal" parameterType="walk" resultType="integer">
+		select count(*) from (select a.*, rowNum rn from (select w.*, m.MB_nick from walk w, member m
+			where w.MB_no = m.MB_no
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+			order by w.WK_no desc) a)
+	</select>
+	
+	<select id="getMaxNum" resultType="integer">
+		select nvl(max(WK_no),0) + 1 from walk
+	</select>
+	
+	<select id="select" parameterType="integer" resultType="walk">
+		select * from walk where WK_no=#{WK_no}
+	</select>
+	
+	<!-- 페이징을 위해 내가 올린 글을 가져오는 로직  -->
+	<select id="getTotalMyFd" parameterType="walk" resultType="integer">
+		select count(*) from (select a.*, rowNum rn from (select * from walk where MB_no=#{MB_no}
+			<!-- 검색어가 있을 때 -->
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+		order by WK_no desc) a)
+	</select>
+	
+	<update id="update" parameterType="walk">
+		update walk set WK_title=#{WK_title}, WK_startDate=#{WK_startDate}, WK_time=#{WK_time}, WK_loc=#{WK_loc}, WK_personNum=#{WK_personNum}, 
+		WK_content=#{WK_content} where WK_no=#{WK_no}
+	</update>
+	
+	<update id="delete" parameterType="integer">
+		update Walk set WK_del='Y' where WK_no=#{WK_no}
+	</update>
+	
+	<!-- 내가 올린 글들만 가져옴 -->
+	<select id="myWalklList" parameterType="walk" resultType="walk">
+		select * from (select a.*, rowNum rn from (select * from walk where MB_no=#{MB_no}
+			<!-- 검색어가 있을 때 -->
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+		order by WK_no desc) a) where rn between #{startRow} and #{endRow}
+	</select>
+	
+	<!-- 관리자 친구 구함 목록 -->
+	<select id="adminWkList" parameterType="walk" resultType="walk">
+		select * from (select a.*, rowNum rn from (select w.*, m.MB_nick from walk w, member m
+			where w.MB_no = m.MB_no
+			<if test="keyword!=null and keyword!=''">
+				and ${search} like '%'||#{keyword}||'%'
+			</if>
+			order by w.WK_no desc) a)
+			where rn between #{startRow} and #{endRow}
+	</select>	
+	
+	<!-- 글 등록한 작성자가 신청 수락할 때마다 WK_personNow +1 해 줌 -->
+	<update id="updatePersonNow" parameterType="integer">
+		update walk set WK_personNow = nvl(WK_personNow, 0)+1 where WK_no=#{WK_no}
+	</update>
+	
+	<!-- 관리자 메인 - 친구 구함 목록 -->
+	<select id="wkAllList" parameterType="walk" resultType="walk">
+		select * from (select a.*, rowNum rn from (select w.*, m.MB_nick from walk w, member m
+			where w.MB_no = m.MB_no order by w.WK_no desc) a)
+			where rn between 1 and 6
+	</select>	
+	
+</mapper>
